@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h1 class="mx-auto text-black text-3xl font-semibold mb-4">Lista de Produtos</h1>
+
+{% if request.user.is_staff %}
+<a href="{% url 'add_produto' %}" class="text-blue-500 underline mb-4">Adicionar Produto</a>
+{% endif %}
+
+<form method="get" action="{% url 'home' %}" class="mb-4">
+  <label for="categoria">Filtrar por Categoria:</label>
+  <select name="categoria" id="categoria" class="mr-2">
+    <option value="" {% if not categoria_selecionada %}selected{% endif %}>Todas as Categorias</option>
+    {% for categoria in categorias %}
+      <option value="{{ categoria }}" {% if categoria == categoria_selecionada %}selected{% endif %}>{{ categoria }}</option>
+    {% endfor %}
+  </select>
+  <label for="busca">Buscar por Nome:</label>
+  <input type="text" name="busca" id="busca" class="mr-2" onkeyup="buscarProdutos()">
+  <button type="button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onclick="buscarProdutos()">Buscar</button>
+</form>
+
+<div id="lista-produtos" class="grid grid-cols-3 gap-4 mt-8"></div>
+
+{% if request.user.is_staff %}
+<div class="grid grid-cols-6 gap-4">
+  {% for produto in produtos %}
+  <div class="card rounded overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out">
+    <a href="{% url 'produto_detalhes' produto.slug %}">
+      <img class="w-full h-40 object-cover rounded-t" src="{% static 'images/'|add:produto.img_url %}" alt="{{ produto.nome }}">
+    </a>
+    <div class="px-6 py-4">
+      <div class="font-bold text-xl mb-2">{{ produto.nome }}</div>
+      <p class="text-gray-700 text-base">Preço: R$ {{ produto.preco|floatformat:2 }}</p>
+    </div>
+    <div class="px-6 pt-4 pb-2">
+      <a href="{% url 'produto_detalhes' produto.slug %}" class="inline-block bg-blue-500 hover:bg-blue-700 rounded-full px-3 py-1 text-sm font-semibold text-white mr-2 mb-2">Saiba mais</a>
+      <a href="{% url 'edit_produto' produto.id %}" class="inline-block bg-yellow-500 hover:bg-yellow-700 rounded-full px-3 py-1 text-sm font-semibold text-white mr-2 mb-2">Editar</a>
+      <a href="{% url 'delete_produto' produto.id %}" class="inline-block bg-red-500 hover:bg-red-700 rounded-full px-3 py-1 text-sm font-semibold text-white mb-2">Excluir</a>
+    </div>
+  </div>
+  {% empty %}
+  <p>Nenhum produto encontrado.</p>
+  {% endfor %}
+</div>
+{% endif %}
+<script>
+  // Esta função será chamada quando a página for carregada
+  window.onload = function() {
+    // Simular o clique no botão "Filtrar" quando a página for carregada
+    document.querySelector('button[type="button"]').click();
+  };
+
+  function buscarProdutos() {
+    var busca = document.getElementById('busca').value;
+    var categoria = document.getElementById('categoria').value;
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/buscar_produtos/?busca=' + busca + '&categoria=' + categoria, true);
+
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState == 4 && xhr.status == 200) {
+        var produtos = JSON.parse(xhr.responseText);
+        var listaProdutos = document.getElementById('lista-produtos');
+        listaProdutos.innerHTML = '';
+
+        for (var i = 0; i < produtos.length; i++) {
+          var produtoDiv = document.createElement('div');
+          produtoDiv.className = 'card rounded overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out';
+          var produtoLink = document.createElement('a');
+          produtoLink.href = '/produto/' + produtos[i].slug + '/';
+          var produtoImg = document.createElement('img');
+          produtoImg.className = 'w-full h-40 object-cover rounded-t';
+          produtoImg.src = '{% static "images/" %}' + produtos[i].img_url;
+          produtoImg.alt = produtos[i].nome;
+          produtoLink.appendChild(produtoImg);
+          var produtoInfo = document.createElement('div');
+          produtoInfo.className = 'px-6 py-4';
+          var produtoNome = document.createElement('div');
+          produtoNome.className = 'font-bold text-xl mb-2';
+          produtoNome.textContent = produtos[i].nome;
+          produtoInfo.appendChild(produtoNome);
+          var produtoPreco = document.createElement('p');
+          produtoPreco.className = 'text-gray-700 text-base';
+          produtoPreco.textContent = 'Preço: R$ ' + produtos[i].preco.toFixed(2);
+          produtoInfo.appendChild(produtoPreco);
+          produtoDiv.appendChild(produtoLink);
+          produtoDiv.appendChild(produtoInfo);
+          listaProdutos.appendChild(produtoDiv);
+        }
+      }
+    };
+
+    xhr.send();
+  }
+</script>
+
+{% endblock %}
